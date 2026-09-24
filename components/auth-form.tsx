@@ -42,40 +42,49 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
 
-        // Cloud login must resolve the user's tenant before redirecting.
-        // The old fallback to /dashboard caused a 404 because Cloud routes are
-        // tenant-scoped (e.g. /dapurkita/dashboard).
-        const requestedNext = search.get("next");
-        if (requestedNext && requestedNext.startsWith("/")) {
-          router.replace(requestedNext);
-        } else if (signInData.user) {
-          const { data: membershipRows } = await supabase
-            .from("business_members")
-            .select("business_id,created_at")
+        // Cloud login priority: Super Admin is a global Cloud role and does NOT
+        // need a tenant. Always resolve this role before honoring a tenant `next`
+        // URL so a Super Admin can never be redirected into a customer workspace.
+        if (signInData.user) {
+          const { data: cloudAdmin, error: cloudAdminError } = await supabase
+            .from("cloud_admins")
+            .select("user_id")
             .eq("user_id", signInData.user.id)
-            .eq("status", "active")
-            .order("created_at", { ascending: true })
-            .limit(1);
+            .maybeSingle();
 
-          const businessId = membershipRows?.[0]?.business_id as string | undefined;
-          if (businessId) {
-            const { data: business } = await supabase
-              .from("businesses")
-              .select("slug")
-              .eq("id", businessId)
-              .maybeSingle();
-            if (business?.slug) {
-              router.replace(`/${business.slug}/dashboard`);
-            } else {
-              router.replace("/onboarding");
-            }
+          if (cloudAdminError) throw cloudAdminError;
+
+          if (cloudAdmin?.user_id) {
+            router.replace("/cloud-admin");
           } else {
-            const { data: cloudAdmin } = await supabase
-              .from("cloud_admins")
-              .select("user_id")
-              .eq("user_id", signInData.user.id)
-              .maybeSingle();
-            router.replace(cloudAdmin ? "/cloud-admin" : "/onboarding");
+            const requestedNext = search.get("next");
+            if (requestedNext && requestedNext.startsWith("/")) {
+              router.replace(requestedNext);
+            } else {
+              const { data: membershipRows } = await supabase
+                .from("business_members")
+                .select("business_id,created_at")
+                .eq("user_id", signInData.user.id)
+                .eq("status", "active")
+                .order("created_at", { ascending: true })
+                .limit(1);
+
+              const businessId = membershipRows?.[0]?.business_id as string | undefined;
+              if (businessId) {
+                const { data: business } = await supabase
+                  .from("businesses")
+                  .select("slug")
+                  .eq("id", businessId)
+                  .maybeSingle();
+                if (business?.slug) {
+                  router.replace(`/${business.slug}/dashboard`);
+                } else {
+                  router.replace("/onboarding");
+                }
+              } else {
+                router.replace("/onboarding");
+              }
+            }
           }
         } else {
           router.replace("/onboarding");
