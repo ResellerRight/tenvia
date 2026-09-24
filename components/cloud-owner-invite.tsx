@@ -1,0 +1,16 @@
+"use client";
+
+import { FormEvent, useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/browser";
+import Link from "next/link";
+import { Brand } from "@/components/brand";
+
+type Preview={email:string;tenant_id:string;tenant_name:string;slug:string;expires_at:string};
+
+export function CloudOwnerInvite({token}:{token:string}){
+ const supabase=createClient(); const [preview,setPreview]=useState<Preview|null>(null); const [authEmail,setAuthEmail]=useState<string|null>(null); const [name,setName]=useState(""); const [password,setPassword]=useState(""); const [busy,setBusy]=useState(false); const [loading,setLoading]=useState(true); const [msg,setMsg]=useState("");
+ useEffect(()=>{void (async()=>{if(!token){setMsg("Token undangan tidak ditemukan.");setLoading(false);return;}const [{data:p,error:e},{data:u}]=await Promise.all([supabase.rpc("get_cloud_owner_invitation_preview",{p_token:token}),supabase.auth.getUser()]);if(e||!p){setMsg(e?.message||"Undangan tidak valid atau sudah kedaluwarsa.");}else setPreview(p as Preview);setAuthEmail(u.user?.email??null);setLoading(false);})();},[supabase,token]);
+ async function accept(){setBusy(true);setMsg("");const {data,error}=await supabase.rpc("accept_cloud_owner_invitation",{p_token:token});setBusy(false);if(error){setMsg(error.message);return;}window.location.href=`/${data.slug}/dashboard`; }
+ async function authenticate(e:FormEvent){e.preventDefault();if(!preview)return;setBusy(true);setMsg("");try{const {data,error}=await supabase.auth.signUp({email:preview.email,password,options:{data:{full_name:name.trim()},emailRedirectTo:`${window.location.origin}/cloud-invite?token=${encodeURIComponent(token)}`}});if(error)throw error;if(!data.session){setMsg("Akun dibuat. Cek email konfirmasi lalu buka kembali link undangan ini.");return;}setAuthEmail(preview.email);setMsg("Akun berhasil dibuat. Klik Terima & Masuk ke Tenant.");}catch(err){setMsg(err instanceof Error?err.message:"Gagal membuat akun.");}finally{setBusy(false);}}
+ return <main className="authStage"><section className="authCard"><Brand showTagline/><div className="authIntro"><h1>Undangan Owner Tenant</h1><p>{preview?`Anda diundang menjadi Owner ${preview.tenant_name}.`:"Memeriksa link undangan..."}</p></div>{loading?<div className="formMessage">Memeriksa undangan...</div>:null}{msg?<div className="formMessage">{msg}</div>:null}{!loading&&preview&&authEmail?<><div className="formMessage">Login sebagai {authEmail}</div><button className="primaryButton" style={{width:"100%"}} onClick={()=>void accept()} disabled={busy}>{busy?"Memproses...":"Terima & Masuk ke Tenant"}</button></>:null}{!loading&&preview&&!authEmail?<form className="formStack" onSubmit={authenticate}><label>Nama Owner<input value={name} onChange={e=>setName(e.target.value)} required placeholder="Nama Anda"/></label><label>Email<input value={preview.email} readOnly type="email"/></label><label>Password<input value={password} onChange={e=>setPassword(e.target.value)} required minLength={6} type="password"/></label><button className="primaryButton" disabled={busy}>{busy?"Membuat Akun...":"Buat Akun & Lanjut"}</button></form>:null}<p className="authSwitch"><Link href="/auth/login">Kembali ke Login</Link></p></section></main>;
+}

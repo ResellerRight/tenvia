@@ -45,7 +45,7 @@ export function OnboardingForm() {
       setLoading(false);
       return;
     }
-    router.replace("/dashboard");
+    router.replace(`/${slug}/dashboard`);
     router.refresh();
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
@@ -11,6 +11,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const search = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (mode !== "login") return;
+    void createClient().rpc("is_cloud_registration_enabled").then(({ data }) => setRegistrationEnabled(data === true));
+  }, [mode]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -134,16 +140,21 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           </button>
         </form>
         {mode === "login" ? (
-          <p className="authSwitch" style={{ marginTop: 12 }}>
-            <Link href="/auth/forgot">Lupa password?</Link>
-          </p>
+          <>
+            <p className="authSwitch" style={{ marginTop: 12 }}>
+              <Link href="/auth/forgot">Lupa password?</Link>
+            </p>
+            {registrationEnabled === true ? (
+              <p className="authSwitch"><Link href="/auth/register">Daftar Tenant Baru</Link></p>
+            ) : null}
+          </>
         ) : (
           <p className="authSwitch">
             <Link href="/auth/login">Kembali ke Login</Link>
           </p>
         )}
         {mode === "login" ? (
-          <p className="authFootnote">Akun baru hanya dibuat melalui aktivasi Owner atau link undangan anggota tim.</p>
+          <p className="authFootnote">Jika pendaftaran tenant dibuka oleh Super Admin, Anda dapat membuat tenant sendiri. Jika ditutup, akses tenant diberikan melalui link undangan.</p>
         ) : null}
       </section>
     </main>
