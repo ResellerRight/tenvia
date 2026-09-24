@@ -1,0 +1,100 @@
+# iMersOrder v1.0.0-r19 — FULL CLIENT INSTALLER
+
+## Fresh Client / Single Install
+
+This package is the complete source for one independent iMersOrder installation.
+
+Architecture:
+- 1 client = 1 GitHub repository
+- 1 client = 1 Vercel project
+- 1 client = 1 Supabase project/database
+- This edition is NOT SaaS multi-tenant.
+
+## 1. Supabase
+
+Create a new Supabase project and run:
+
+`supabase/iMersOrder_MASTER_FULL_v1.0.sql`
+
+Run it once on a fresh project.
+
+## 3. Upgrade from v0.2.10
+
+If you already run iMersOrder v0.2.10, do NOT rerun the full master schema. Run `iMersOrder_v1.0.0-r12_HUTANG_PIUTANG_PATCH.sql` once in the existing Supabase project.
+
+The fresh-install master already includes the same module as `supabase/iMersOrder_MASTER_FULL_v1.0.sql`.
+
+
+## 2. Data awal: pilih kosong atau data contoh
+
+Pada onboarding pertama, pilih salah satu:
+- **Mulai kosong** — usaha dibuat tanpa pelanggan, produk, atau piutang contoh.
+- **Gunakan data contoh Katering** — otomatis dibuat **10 pelanggan, 3 piutang, dan 6 produk catering**. Data contoh dapat diedit atau dihapus setelah masuk dashboard.
+
+Data contoh hanya untuk instalasi baru/business baru melalui onboarding. Tidak mengisi database client lama.
+
+## 3. Vercel environment variables
+
+Required:
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY (or supported publishable key)
+
+Optional WhatsApp gateway:
+- REMINDER_CRON_SECRET
+
+Owner activation protection:
+- OWNER_SETUP_KEY
+
+Never put SUPABASE_SERVICE_ROLE_KEY in client-side code.
+
+## 4. GitHub + Vercel
+
+Upload the contents of this package to the ROOT of a GitHub repository, then deploy that repository with Vercel.
+
+Node target: >=20.9
+Next.js: 15.5.24
+React: 19.1.0
+TypeScript: 5.8.3
+Supabase JS: 2.49.8
+Supabase SSR: 0.6.1
+
+## 5. WhatsApp reminder
+
+Without a gateway:
+- reminder monitoring remains visible in the app;
+- user can send WhatsApp manually through wa.me;
+- automatic WhatsApp delivery does not run.
+
+With Fonnte or Starsender:
+- automatic reminder can run through the Supabase Edge Function:
+  `supabase/functions/process-reminders/index.ts`
+- deploy it as `process-reminders`;
+- configure the provider secret and REMINDER_CRON_SECRET;
+- schedule the Edge Function (daily minimum; hourly recommended).
+
+## 6. Authentication
+
+This is a single-install application. Public self-registration is disabled in the UI.
+
+The first Owner is activated through the protected Owner setup flow. Additional Admin/Staff/Finance users join through Owner invitations.
+
+## WhatsApp Token
+
+Token Fonnte / API Key Starsender sekarang diisi langsung dari menu **Integrasi WhatsApp**. Tidak perlu menaruh token provider di Vercel Environment Variables atau Supabase Secrets. `REMINDER_CRON_SECRET` tetap digunakan untuk scheduler reminder.
+
+
+### WhatsApp v1.0.0-r12
+Normal WhatsApp sends use the signed-in Supabase session and a protected RPC to read the business provider credential. `SUPABASE_SERVICE_ROLE_KEY` is not required for normal WhatsApp sends; keep it only for server/background tasks such as scheduled reminders.
+
+
+### r18 branding migration
+For an existing installation, run only `supabase/migrations/202609240006_branding_everywhere.sql`. Do not rerun the master SQL. This makes the uploaded logo available on login and on public invoice print/save-to-PDF.
+
+### r19 demo-data migration
+For an existing installation that wants the new onboarding option, run `supabase/migrations/202609240007_demo_data_option.sql` once. It adds the optional demo-data flag to business creation. It does not seed existing businesses automatically.
+
+### r20 — Existing business demo seed
+
+For an existing Catering business, run `supabase/migrations/202609240008_seed_demo_existing_business.sql`, deploy r20, then open Pengaturan Usaha and choose **Isi Data Contoh Katering**. This adds 10 customers, 3 receivables, and 6 Catering products to the current business. The action is Owner-only and idempotent.
+
+For a new installation, `supabase/iMersOrder_MASTER_FULL_v1.0.sql` already contains the same RPC, so the migration is not required.
