@@ -1,10 +1,8 @@
-# iMersOrders Cloud — r29
+# iMersOrders Cloud — r30
 
 ## r29 Login Routing Fix
 
-Login now resolves the authenticated user to their active tenant and redirects to `/{tenant}/dashboard`. The previous `/dashboard` fallback could produce a 404 on the Cloud tenant architecture.
-
-If login is opened from `/{tenant}/login`, the tenant-specific `next` URL is preserved. Super Admin users without a tenant membership are routed to `/cloud-admin`.
+Login now resolves the global Cloud role before tenant routing. Super Admin users are routed to `/cloud-admin` and never require a tenant. Tenant users are routed to `/{tenant}/dashboard`; the old `/dashboard` fallback is not used.
 
 # iMersOrders Cloud
 

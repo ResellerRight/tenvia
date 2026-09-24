@@ -1,7 +1,7 @@
 # iMersOrders Cloud — Setup & Operating Notes
 
 ## Tenant flow
-Super Admin → Create Tenant → user registers → Super Admin Assign Owner → owner opens `/{slug}/login` → tenant dashboard.
+Super Admin (no tenant required) → Create Tenant → user registers → Super Admin Assign Owner → owner opens `/{slug}/login` → tenant dashboard.
 
 ## URL structure
 - `/` = Cloud directory
