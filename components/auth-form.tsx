@@ -39,9 +39,47 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         }
         router.replace("/onboarding");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.replace(search.get("next") || "/dashboard");
+
+        // Cloud login must resolve the user's tenant before redirecting.
+        // The old fallback to /dashboard caused a 404 because Cloud routes are
+        // tenant-scoped (e.g. /dapurkita/dashboard).
+        const requestedNext = search.get("next");
+        if (requestedNext && requestedNext.startsWith("/")) {
+          router.replace(requestedNext);
+        } else if (signInData.user) {
+          const { data: membershipRows } = await supabase
+            .from("business_members")
+            .select("business_id,created_at")
+            .eq("user_id", signInData.user.id)
+            .eq("status", "active")
+            .order("created_at", { ascending: true })
+            .limit(1);
+
+          const businessId = membershipRows?.[0]?.business_id as string | undefined;
+          if (businessId) {
+            const { data: business } = await supabase
+              .from("businesses")
+              .select("slug")
+              .eq("id", businessId)
+              .maybeSingle();
+            if (business?.slug) {
+              router.replace(`/${business.slug}/dashboard`);
+            } else {
+              router.replace("/onboarding");
+            }
+          } else {
+            const { data: cloudAdmin } = await supabase
+              .from("cloud_admins")
+              .select("user_id")
+              .eq("user_id", signInData.user.id)
+              .maybeSingle();
+            router.replace(cloudAdmin ? "/cloud-admin" : "/onboarding");
+          }
+        } else {
+          router.replace("/onboarding");
+        }
       }
       router.refresh();
     } catch (error) {
