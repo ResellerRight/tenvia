@@ -1,3 +1,7 @@
+# iMersOrders Cloud — r31
+
+Multi-tenant iMersOrders Cloud. Public tenant registration can be enabled/disabled from Cloud Admin. When disabled, tenant access is distributed via invitation links. The first Supabase Auth user is automatically bootstrapped as global Super Admin and does not receive a tenant.
+
 # iMersOrders Cloud — r30
 
 ## r29 Login Routing Fix
@@ -33,3 +37,9 @@ Multi-tenant edition built from the iMersOrder r28 baseline.
 9. Open `/{tenant-slug}/login`.
 
 For an existing r28 database, use `supabase/migrations/202609240100_cloud_multitenant.sql` instead of rerunning the full master.
+
+## r31 registration
+- Super Admin can enable/disable self-service tenant registration from Cloud Admin.
+- When enabled, visitors can register and create their own tenant.
+- When disabled, new tenants are provisioned by Super Admin and the owner receives a tenant invitation link.
+- On a clean install, the first Supabase Auth user is automatically added to `cloud_admins`; no manual SQL is required.
